@@ -59,10 +59,19 @@ body {
   animation: rise 0.7s ease both;
 }
 
+.logo {
+  display: block;
+  width: clamp(240px, 42vw, 340px);
+  height: auto;
+  margin-bottom: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(14, 26, 40, 0.28);
+}
+
 .brand {
   margin: 0 0 0.75rem;
   font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3rem);
+  font-size: clamp(1.9rem, 4.6vw, 2.6rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--teal-deep);
@@ -257,6 +266,28 @@ input:focus {
   color: var(--muted);
   font-size: 0.82rem;
   max-width: 62ch;
+}
+
+.site-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.footer-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.site-footer strong {
+  color: var(--teal-deep);
+  font-weight: 600;
 }
 
 @keyframes rise {
