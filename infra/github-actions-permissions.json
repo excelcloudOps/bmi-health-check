@@ -53,6 +53,9 @@
         "lambda:GetFunction",
         "lambda:GetFunctionConfiguration",
         "lambda:DeleteFunction",
+        "lambda:ListVersionsByFunction",
+        "lambda:PublishVersion",
+        "lambda:GetFunctionCodeSigningConfig",
         "lambda:TagResource",
         "lambda:UntagResource",
         "lambda:ListTags",
@@ -65,7 +68,10 @@
         "lambda:DeleteFunctionUrlConfig",
         "lambda:ListFunctionUrlConfigs"
       ],
-      "Resource": "arn:aws:lambda:us-east-2:ACCOUNT_ID:function:bmi-health-check"
+      "Resource": [
+        "arn:aws:lambda:us-east-2:ACCOUNT_ID:function:bmi-health-check",
+        "arn:aws:lambda:us-east-2:ACCOUNT_ID:function:bmi-health-check:*"
+      ]
     },
     {
       "Sid": "IAMForLambdaRole",
