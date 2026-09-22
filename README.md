@@ -1,6 +1,8 @@
 # BMI Health Check — Lambda container demo
 
-FastAPI service that calculates BMI and exposes a `/health` endpoint, packaged as a container image and run on **AWS Lambda** (container image) behind a **Function URL**.
+FastAPI BMI calculator packaged as a container image and deployed to **AWS Lambda** (container image) behind a **Function URL**.
+
+**All build, scan, push, and deploy steps run in GitHub Actions.** There is no local deploy path.
 
 ## Endpoints
 
@@ -12,63 +14,48 @@ FastAPI service that calculates BMI and exposes a `/health` endpoint, packaged a
 
 Response includes `bmi` (1 decimal) and `category`: `underweight` \| `normal` \| `overweight` \| `obese`.
 
-## Local development
+## CI/CD (fully automated)
 
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r app/requirements.txt -r requirements-dev.txt
-PYTHONPATH=. pytest -q
-uvicorn app.main:app --reload --port 8080
-```
+Trigger: push to `main` or **Actions → Build and Deploy → Run workflow**.
 
-Docker (requires Docker daemon):
+Pipeline:
 
-```bash
-docker build -t bmi-health-check .
-docker run --rm -p 8080:8080 bmi-health-check
-curl -s localhost:8080/health
-curl -s 'localhost:8080/bmi?height_cm=175&weight_kg=70'
-```
+1. **Unit tests** (pytest)
+2. **Ensure ECR** exists (Terraform)
+3. **Build** Docker image (Buildx)
+4. **Scan** image with Trivy (fail on CRITICAL/HIGH)
+5. **Push** image to ECR (`:sha` + `:latest`)
+6. **Deploy** Lambda via Terraform
+7. **Smoke test** `/health` and `/bmi` against the Function URL
 
-## AWS deploy (us-east-2)
-
-Resources: ECR repo, Lambda (image), Function URL (`NONE` auth for demo), CloudWatch Logs.
-
-### One-time: GitHub Actions OIDC role
-
-Create an IAM role trusted by `token.actions.githubusercontent.com` for `repo:excelcloudOps/bmi-health-check:*`, with permissions to manage ECR, Lambda, IAM pass-role for the Lambda execution role, and CloudWatch Logs.
-
-Set repo secret:
+### Required secret
 
 | Secret | Value |
 | --- | --- |
-| `AWS_IAM_ROLE_ARN` | ARN of the GitHub Actions deploy role |
+| `AWS_IAM_ROLE_ARN` | `arn:aws:iam::319029038820:role/github-actions-bmi-health-check` |
 
-### CI/CD
+OIDC trust must allow GitHub’s `repo:org@id/repo@id:...` subject format (already configured).
 
-Push to `main` (or run **Build and Deploy** manually):
+### Live URL
 
-1. Pytest
-2. Ensure ECR exists (Terraform target)
-3. Build/push image tagged with `github.sha` + `latest`
-4. Terraform apply Lambda + Function URL
-
-### Manual bootstrap (CLI)
+```text
+https://ccgykghnzvmolqnqqg3io6ljdm0dgotw.lambda-url.us-east-2.on.aws/
+```
 
 ```bash
-cd terraform
-terraform init
-terraform apply -target=aws_ecr_repository.app -target=aws_ecr_lifecycle_policy.app -auto-approve
+curl -sS https://ccgykghnzvmolqnqqg3io6ljdm0dgotw.lambda-url.us-east-2.on.aws/health
+curl -sS 'https://ccgykghnzvmolqnqqg3io6ljdm0dgotw.lambda-url.us-east-2.on.aws/bmi?height_cm=175&weight_kg=70'
+```
 
-ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-REGION=us-east-2
-aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
-docker build -t bmi-health-check .
-docker tag bmi-health-check:latest "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/bmi-health-check:latest"
-docker push "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/bmi-health-check:latest"
+## Local development only (optional)
 
-terraform apply -var="image_tag=latest" -auto-approve
-terraform output function_url
+App/tests only — not used for deploy:
+
+```bash
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r app/requirements.txt -r requirements-dev.txt
+PYTHONPATH=. pytest -q
+uvicorn app.main:app --reload --port 8080
 ```
 
 ## Project layout
@@ -78,5 +65,6 @@ app/                 FastAPI app + BMI logic
 tests/               unit tests
 Dockerfile           Lambda Web Adapter + uvicorn
 terraform/           ECR, IAM, Lambda, Function URL
-.github/workflows/   test + deploy
+.github/workflows/   test → build → scan → push → deploy
+infra/               GitHub OIDC IAM policy docs
 ```
