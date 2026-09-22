@@ -155,6 +155,26 @@ jobs:
         working-directory: terraform
         run: terraform init -input=false
 
+      - name: Import existing Lambda invoke permission if needed
+        working-directory: terraform
+        run: |
+          set -euo pipefail
+          if terraform state list 2>/dev/null | grep -qx 'aws_lambda_permission.function_url_invoke'; then
+            echo "Permission already in Terraform state"
+            exit 0
+          fi
+          if aws lambda get-policy --function-name "${PROJECT_NAME}" 2>/dev/null \
+            | grep -q 'AllowPublicInvokeFunction'; then
+            terraform import \
+              -var="aws_region=${AWS_REGION}" \
+              -var="project_name=${PROJECT_NAME}" \
+              -var="image_tag=${IMAGE_TAG}" \
+              aws_lambda_permission.function_url_invoke \
+              "${PROJECT_NAME}/AllowPublicInvokeFunction"
+          else
+            echo "No existing invoke permission to import"
+          fi
+
       - name: Terraform Apply
         working-directory: terraform
         run: |
