@@ -36,6 +36,28 @@ resource "aws_ecr_lifecycle_policy" "app" {
   })
 }
 
+resource "aws_ecr_repository_policy" "lambda_pull" {
+  repository = aws_ecr_repository.app.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowLambdaPull"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+        Action = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability"
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-lambda"
 
