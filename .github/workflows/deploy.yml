@@ -193,11 +193,16 @@ jobs:
           echo "FUNCTION_URL=${URL}" >> "$GITHUB_STEP_SUMMARY"
           curl -fsS "${URL}/health" | tee /tmp/health.json
           curl -fsS "${URL}/bmi?height_cm=175&weight_kg=70" | tee /tmp/bmi.json
+          curl -fsS "${URL}/" | tee /tmp/home.html
           python3 - <<'PY'
-          import json, sys
+          import json
           health = json.load(open("/tmp/health.json"))
           bmi = json.load(open("/tmp/bmi.json"))
+          home = open("/tmp/home.html").read()
           assert health.get("status") == "ok", health
           assert bmi.get("category") == "normal", bmi
+          assert bmi.get("health_advice"), bmi
+          assert bmi.get("exercises"), bmi
+          assert "BMI Health Check" in home
           print("Smoke tests passed")
           PY
